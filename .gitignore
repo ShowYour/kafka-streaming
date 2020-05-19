@@ -25,7 +25,7 @@
 hs_err_pid*
 
 .idea/
-kafka-streaming.iml
-pom.xml
-src/
+#kafka-streaming.iml
+#pom.xml
+#src/
 target/
