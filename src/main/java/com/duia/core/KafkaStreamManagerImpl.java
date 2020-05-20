@@ -1,5 +1,6 @@
 package com.duia.core;
 
+import com.duia.util.ZkUtils;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +27,14 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
     @Override
     public boolean startApplication(KafkaStreamApplication application) {
         if (application.getStat()== KafkaStreamApplication.KafkaStreamApplicationStat.STOP){
-            application.start();
             //启动成功后，设置状态并通知zookeeper
-            KafkaStreamApplicationStat stat = KafkaStreamApplicationStat.START;
             try {
-                getZooKeeper().setData(rootPath+application.getApplicationName(),stat.toString().getBytes(),-1);
-            } catch (KeeperException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                application.start();
+                ZkUtils.setData(getZooKeeper(),rootPath+application.getApplicationName(),
+                        KafkaStreamApplicationStat.START.toString().getBytes(),-1);
+                return true;
+            } catch (KeeperException | InterruptedException e) {
+                LOGGER.error("{}",e);
             }
         }
         return false;
@@ -43,15 +43,14 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
     @Override
     public boolean stopApplication(KafkaStreamApplication application) {
         if (application.getStat()== KafkaStreamApplication.KafkaStreamApplicationStat.START){
-            application.stop();
-            //启动成功后，通知zookeeper
-            KafkaStreamApplicationStat stat = KafkaStreamApplicationStat.STOP;
+            //停止成功后，通知zookeeper
             try {
-                getZooKeeper().setData(rootPath+application.getApplicationName(),stat.toString().getBytes(),-1);
-            } catch (KeeperException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                application.stop();
+                getZooKeeper().setData(rootPath+application.getApplicationName(),
+                        KafkaStreamApplicationStat.STOP.toString().getBytes(),-1);
+                return true;
+            } catch (KeeperException |InterruptedException e) {
+                LOGGER.error("{}",e);
             }
         }
         return false;
@@ -60,11 +59,12 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
     @Override
     public boolean registerKafkaStreamApplication(KafkaStreamApplication application) {
         try {
-            createPath(rootPath+application.getApplicationName(),application.getStat().toString());
-        } catch (KeeperException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            if (application.getStat()==KafkaStreamApplicationStat.START){
+                application.start();
+            }
+            ZkUtils.createPath(getZooKeeper(),rootPath+application.getApplicationName(),application.getStat().toString());
+        } catch (KeeperException | InterruptedException e) {
+            LOGGER.error("注册kafkaStreamApplication失败,error:{}",e);
         }
         return true;
     }
@@ -72,13 +72,10 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
     @Override
     public void watchKafkaStreamApplication(KafkaStreamApplication application) {
         try {
-            getZooKeeper().getData(rootPath + application.getApplicationName(),
-                    new KafkaStreamWatcher(this,application),
-                    null);
-        } catch (KeeperException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            ZkUtils.getData(getZooKeeper(),rootPath + application.getApplicationName(),
+                    new KafkaStreamWatcher(this,application),null);
+        } catch (KeeperException | InterruptedException e) {
+            LOGGER.error("监听kafkaStreamApplication在zookeeper上的状态失败,error:{}",e);
         }
     }
 
@@ -98,68 +95,21 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
 
         @Override
         public void process(WatchedEvent event) {
-            byte[] data = new byte[0];
             try {
-                    data = getZooKeeper().getData(rootPath + application.getApplicationName(), this, null);
-            } catch (KeeperException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            String value = new String(data);
-            KafkaStreamApplication.KafkaStreamApplicationStat stat = KafkaStreamApplication.KafkaStreamApplicationStat.valueOf(value);
-
-            switch (stat){
-                case STOP:
-                    kafkaStreamManager.stopApplication(application);
-                    break;
-                case START:
-                    kafkaStreamManager.startApplication(application);
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    /**
-     * zookeeper创建节点，若父节点不存在则先创建父节点 /a/b/c
-     * @param path
-     * @param data
-     * @throws KeeperException
-     * @throws InterruptedException
-     */
-    private void createPath(String path,Object data) throws KeeperException, InterruptedException {
-        List<String> newPaths = new ArrayList<>();
-        char[] chars = path.toCharArray();
-        StringBuffer stringBuffer = new StringBuffer();
-        for (int i = 0; i < chars.length; i++) {
-            if (chars[i]=='/'){
-                String newPath = stringBuffer.toString();
-                if (newPath!=null && newPath.trim().length()>0){
-                    newPaths.add(newPath);
+                byte[] data = ZkUtils.getData(getZooKeeper(), rootPath + application.getApplicationName(), this, null);
+                KafkaStreamApplicationStat stat = KafkaStreamApplicationStat.valueOf(new String(data));
+                switch (stat){
+                    case STOP:
+                        kafkaStreamManager.stopApplication(application);
+                        break;
+                    case START:
+                        kafkaStreamManager.startApplication(application);
+                        break;
+                    default:
+                        break;
                 }
-                stringBuffer = new StringBuffer();
-            }
-            stringBuffer.append(chars[i]);
-        }
-
-        if (stringBuffer.toString()!=null && stringBuffer.toString().trim().length()>0){
-            newPaths.add(stringBuffer.toString());
-        }
-
-        for (int i = 0; i < newPaths.size(); i++) {
-            List<String> newPath = newPaths.subList(0, i+1);
-            StringBuffer buffer = new StringBuffer();
-            for (String s:newPath){
-                buffer.append(s);
-            }
-            byte[] d = (i==newPaths.size()-1)?data.toString().getBytes():null;
-            if (zooKeeper.exists(buffer.toString(),null)==null){
-                zooKeeper.delete(buffer.toString(),-1);
-                zooKeeper.create(buffer.toString(),
-                        d,
-                        ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            } catch (KeeperException | InterruptedException e) {
+                LOGGER.error("{}",e);
             }
         }
     }
@@ -179,7 +129,7 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
             });
             countDownLatch.await();
         } catch (IOException | InterruptedException e) {
-            LOGGER.error("创建zookeeper客户端失败",e.getMessage());
+            LOGGER.error("创建zookeeper客户端失败",e);
         }
         return zooKeeper;
     }
@@ -189,9 +139,9 @@ public class KafkaStreamManagerImpl implements KafkaStreamManager {
      * @return
      */
     private static ZooKeeper getZooKeeper(){
-        if (zooKeeper==null || zooKeeper.getState().isAlive()){
+        if (zooKeeper==null || !zooKeeper.getState().isAlive()){
             synchronized (KafkaStreamManagerImpl.class){
-                if (zooKeeper==null || zooKeeper.getState().isAlive()){
+                if (zooKeeper==null || !zooKeeper.getState().isAlive()){
                     zooKeeper = createZookeeper();
                 }
             }

@@ -1,12 +1,12 @@
 package com.duia.kafkaStreamAplications;
 
 import com.duia.core.AbstractKafkaStreamApplication;
-import com.duia.core.KafkaStream;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.*;
+import java.util.Arrays;
 import java.util.Properties;
 
 /**
@@ -15,7 +15,6 @@ import java.util.Properties;
  * @Date 2020/5/18 10:16
  * @Description TODO
  **/
-@KafkaStream
 public class kafkaApplicationDemo extends AbstractKafkaStreamApplication {
 
     @Override
@@ -30,11 +29,30 @@ public class kafkaApplicationDemo extends AbstractKafkaStreamApplication {
 
     @Override
     public Topology getTopology() {
-        StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> source = builder.stream("streams-plaintext-input");
-        source.to("streams-pipe-output");
-        Topology topology = builder.build();
+        Topology topology = simplest("simplest-input", "simplest-output");
         return topology;
     }
 
+
+    private Topology simplest(String input,String output){
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<Object, String> stream = builder.stream(input);
+        stream.to(output);
+        Topology topology = builder.build();
+        return topology;
+    }
+    /**
+     * 单词数量统计
+     * @return
+     */
+    private Topology wordCount(String input,String output){
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<Object, String> stream = builder.stream(input);
+        KStream<Object, String> words = stream.flatMapValues(value -> Arrays.asList(value.split(",")));
+        KGroupedStream<String, String> vGroup = words.groupBy((k, v) -> v);
+        KTable<String, Long> count = vGroup.count();
+        count.toStream().to(output);
+        Topology topology = builder.build();
+        return topology;
+    }
 }

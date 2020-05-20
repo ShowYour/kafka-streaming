@@ -34,15 +34,13 @@ public interface KafkaStreamApplication {
 
     /**
      * 启动application
-     * @return
      */
-    boolean start();
+    void start();
 
     /**
      * 关闭application
-     * @return
      */
-    boolean stop();
+    void stop();
 
     /**
      * @return 返回application的状态

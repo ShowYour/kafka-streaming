@@ -14,7 +14,7 @@
         <junit.scope>test</junit.scope>
         <logback.version>1.2.3</logback.version>
         <mybatis.version>2.1.2</mybatis.version>
-        <zookeeper.version>3.4.13</zookeeper.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
     </properties>
 
     <parent>
@@ -81,7 +81,6 @@
             <scope>${junit.scope}</scope>
         </dependency>
         <!--logback-->
-        <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>

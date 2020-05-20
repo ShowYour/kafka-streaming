@@ -7,7 +7,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,21 +23,25 @@ public class KafkaStreamContext implements ApplicationContextAware {
     private static final Map<String,KafkaStreamApplication> apps = new HashMap<>();
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        //创建manager
         if (context==null){
             context = applicationContext;
+        }
+        //创建manager
+        if (manager == null){
+            manager = new KafkaStreamManagerImpl();
         }
         Map<String, Object> beans = context.getBeansWithAnnotation(KafkaStream.class);
         for (Object o:beans.values()){
             if (o instanceof KafkaStreamApplication){
                 KafkaStreamApplication kafkaStreamApp = (KafkaStreamApplication)o;
+                KafkaStream annotation = kafkaStreamApp.getClass().getAnnotation(KafkaStream.class);
+                if (annotation!=null){
+                    kafkaStreamApp.setStat(annotation.stat());
+                }
                 apps.put(kafkaStreamApp.getApplicationName(),kafkaStreamApp);
             }else{
                 LOGGER.warn("{} 需要实现KafkaStreamApplication接口",o.getClass().getName());
             }
-        }
-        if (manager == null){
-            manager = new KafkaStreamManagerImpl();
         }
         //将kafkaStreamApp注册到zookeeper
         for (KafkaStreamApplication app:apps.values()){
@@ -47,19 +50,25 @@ public class KafkaStreamContext implements ApplicationContextAware {
         }
     }
 
+    /**获取spring容器applicationContext
+     * @return
+     */
+    public ApplicationContext getSpringApplicationContext(){
+        return context;
+    }
     /**
      * 获取一个KafkaStreamManager
      * @return
      */
-    public static KafkaStreamManager getKafkaStreamManager(){
+    public KafkaStreamManager getKafkaStreamManager(){
         return manager;
     }
 
     /**
      * @return 获取所有的kafka stream application
      */
-    static List<KafkaStreamApplication> getAllKafkaStreamApp() {
-        return null;
+    public Map<String,KafkaStreamApplication> getAllKafkaStreamApp() {
+        return apps;
     }
 
     /**
@@ -68,7 +77,7 @@ public class KafkaStreamContext implements ApplicationContextAware {
      * @param appName
      * @return
      */
-    static KafkaStreamApplication getKafkaStreamApp(String appName) {
-        return null;
+    public KafkaStreamApplication getKafkaStreamApp(String appName) {
+        return apps.get(appName);
     }
 }
