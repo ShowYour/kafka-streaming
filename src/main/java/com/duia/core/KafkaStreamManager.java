@@ -1,5 +1,7 @@
 package com.duia.core;
 
+import java.util.Collection;
+
 /**
 *@ClassName KafkaStreamManager
 *@Author xiaoyu
@@ -14,7 +16,7 @@ public interface KafkaStreamManager {
      * @param application
      * @return
      */
-    boolean startApplication(KafkaStreamApplication application);
+    void startApplication(KafkaStreamApplication application);
 
     /**
      * 关闭一个application
@@ -22,7 +24,7 @@ public interface KafkaStreamManager {
      * @param application
      * @return
      */
-    boolean stopApplication(KafkaStreamApplication application);
+    void stopApplication(KafkaStreamApplication application);
 
 
     /**
@@ -30,12 +32,18 @@ public interface KafkaStreamManager {
      * @param application
      * @return
      */
-    boolean registerKafkaStreamApplication(KafkaStreamApplication application);
+    void registerKafkaStreamApplication(KafkaStreamApplication application);
 
     /**
      * 若该application已注册，则监听它的启动停止状态
      * @param application
      */
     void watchKafkaStreamApplication(KafkaStreamApplication application);
+
+    /**
+     * 检查kafkaStreamApplication中的stream实例是否处于Alive状态
+     * @param apps
+     */
+    void supervisorKafkaStreamApps(Collection<KafkaStreamApplication> apps);
 
 }

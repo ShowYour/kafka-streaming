@@ -34,10 +34,6 @@ public class KafkaStreamContext implements ApplicationContextAware {
         for (Object o:beans.values()){
             if (o instanceof KafkaStreamApplication){
                 KafkaStreamApplication kafkaStreamApp = (KafkaStreamApplication)o;
-                KafkaStream annotation = kafkaStreamApp.getClass().getAnnotation(KafkaStream.class);
-                if (annotation!=null){
-                    kafkaStreamApp.setStat(annotation.stat());
-                }
                 apps.put(kafkaStreamApp.getApplicationName(),kafkaStreamApp);
             }else{
                 LOGGER.warn("{} 需要实现KafkaStreamApplication接口",o.getClass().getName());
@@ -48,6 +44,8 @@ public class KafkaStreamContext implements ApplicationContextAware {
             manager.registerKafkaStreamApplication(app);
             manager.watchKafkaStreamApplication(app);
         }
+        //启动定时检查线程
+        manager.supervisorKafkaStreamApps(apps.values());
     }
 
     /**获取spring容器applicationContext

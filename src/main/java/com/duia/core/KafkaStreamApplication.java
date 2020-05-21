@@ -1,6 +1,8 @@
 package com.duia.core;
 
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.errors.StreamsException;
+
 import java.util.Properties;
 
 /**
@@ -35,7 +37,7 @@ public interface KafkaStreamApplication {
     /**
      * 启动application
      */
-    void start();
+    void start() throws IllegalStateException,StreamsException;
 
     /**
      * 关闭application
@@ -43,12 +45,8 @@ public interface KafkaStreamApplication {
     void stop();
 
     /**
-     * @return 返回application的状态
+     * kafkaStreamApplication是否存活
+     * @return
      */
-    KafkaStreamApplicationStat getStat();
-
-    /**
-     * @param stat 设置application的状态
-     */
-    void setStat(KafkaStreamApplicationStat stat);
+    boolean isAlive();
 }

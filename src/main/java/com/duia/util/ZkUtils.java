@@ -1,6 +1,7 @@
 package com.duia.util;
 
 import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ public final class ZkUtils {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public static void createPath(ZooKeeper zooKeeper,String path, Object data) throws KeeperException, InterruptedException {
+    public static void createPath(ZooKeeper zooKeeper,String path, Object data) {
         List<String> newPaths = new ArrayList<>();
         char[] chars = path.toCharArray();
         StringBuffer stringBuffer = new StringBuffer();
@@ -46,11 +47,10 @@ public final class ZkUtils {
                 buffer.append(s);
             }
             byte[] d = (i==newPaths.size()-1)?data.toString().getBytes():null;
-            if (zooKeeper.exists(buffer.toString(),null)==null){
-                zooKeeper.delete(buffer.toString(),-1);
-                zooKeeper.create(buffer.toString(),
-                        d,
-                        ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            if (exists(zooKeeper,buffer.toString(),null)==null){
+                create(zooKeeper,buffer.toString(),d,null,CreateMode.PERSISTENT);
+            }else {
+                setData(zooKeeper,buffer.toString(),d,-1);
             }
         }
     }
@@ -58,14 +58,39 @@ public final class ZkUtils {
     /**
      * @param zooKeeper
      * @param path
+     * @param data
+     * @param ids
+     * @param createMode
+     * @return
+     */
+    public static String create(ZooKeeper zooKeeper, String path, byte[] data, List<ACL> ids,CreateMode createMode){
+        String nodePath = null;
+        try {
+            nodePath = zooKeeper.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return nodePath;
+    }
+    /**
+     * @param zooKeeper
+     * @param path
      * @param watcher
      * @param stat
      * @return
-     * @throws KeeperException
-     * @throws InterruptedException
      */
-    public static byte[] getData(ZooKeeper zooKeeper, String path, Watcher watcher, Stat stat) throws KeeperException, InterruptedException {
-        return zooKeeper.getData(path, watcher, stat);
+    public static byte[] getData(ZooKeeper zooKeeper, String path, Watcher watcher, Stat stat) {
+        byte[] data = new byte[0];
+        try {
+            data = zooKeeper.getData(path, watcher, stat);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return data;
     }
 
     /**
@@ -73,10 +98,32 @@ public final class ZkUtils {
      * @param path
      * @param data
      * @param version
-     * @throws KeeperException
-     * @throws InterruptedException
      */
-    public static void setData(ZooKeeper zooKeeper,String path,byte[] data,int version) throws KeeperException, InterruptedException {
-        zooKeeper.setData(path,data,version);
+    public static void setData(ZooKeeper zooKeeper,String path,byte[] data,int version) {
+        try {
+            zooKeeper.setData(path,data,version);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * @param zooKeeper
+     * @param path
+     * @param watcher
+     * @return
+     */
+    public static Stat exists(ZooKeeper zooKeeper,String path,Watcher watcher){
+        Stat stat = null;
+        try {
+            stat = zooKeeper.exists(path,watcher);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return stat;
     }
 }

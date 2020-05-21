@@ -1,6 +1,7 @@
 package com.duia.kafkaStreamAplications;
 
 import com.duia.core.AbstractKafkaStreamApplication;
+import com.duia.core.KafkaStream;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -15,6 +16,7 @@ import java.util.Properties;
  * @Date 2020/5/18 10:16
  * @Description TODO
  **/
+@KafkaStream
 public class kafkaApplicationDemo extends AbstractKafkaStreamApplication {
 
     @Override
