@@ -13,7 +13,7 @@
 
     <properties>
         <kafka.version>1.1.1</kafka.version>
-        <junit.version>4.10</junit.version>
+        <junit.version>4.13.1</junit.version>
         <junit.scope>test</junit.scope>
         <logback.version>1.2.3</logback.version>
         <mybatis.version>2.1.2</mybatis.version>
